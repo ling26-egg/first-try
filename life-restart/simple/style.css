@@ -1,0 +1,181 @@
+/* ============================================
+   样式表：负责"页面上的一切长什么样"
+   阅读顺序：变量 → 页面底子 → 各屏幕组件
+   ============================================ */
+
+/* ---------- 1. 变量：把颜色起个名字，全站复用 ---------- */
+:root {
+  --ink: #16120d;        /* 深墨：页面底色 */
+  --paper: #f3ead8;      /* 宣纸：卡片底色 */
+  --paper-hi: #faf4e6;   /* 更亮的纸 */
+  --txt: #2b2118;        /* 墨字：纸上的文字 */
+  --txt-dim: #7c6f5c;    /* 淡墨：次要文字 */
+  --cinnabar: #b03a2e;   /* 朱砂：主题红 */
+  --line: rgba(43, 33, 24, .22);  /* 半透明墨线 */
+  --serif: "Noto Serif SC", "Songti SC", "SimSun", serif;   /* 衬线字体 */
+  --brush: "Ma Shan Zheng", "KaiTi", serif;                 /* 毛笔字 */
+}
+
+/* ---------- 2. 页面底子 ---------- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  /* 深墨背景 + 居中垂直布局 */
+  background: var(--ink);
+  color: var(--txt);
+  font-family: var(--serif);
+  min-height: 100vh;
+  display: grid;            /* grid 的 place-items 是"水平垂直居中"的快捷写法 */
+  place-items: center;
+  padding: 28px 16px;
+}
+
+/* 背景那个巨大的"命"字 */
+.bg-char {
+  position: fixed;          /* fixed：钉在窗口上，不随滚动 */
+  inset: 0;                 /* inset:0 = 上下左右全贴合 */
+  display: grid;
+  place-items: center;
+  font: 900 min(52vw, 520px)/1 var(--serif);
+  color: rgba(243, 234, 216, .04);  /* 几乎透明的亮色 */
+  pointer-events: none;     /* 鼠标点不中它，纯装饰 */
+}
+
+/* 宣纸卡片：整个游戏住在这张"纸"里 */
+.stage {
+  width: min(430px, 94vw);  /* 最宽 430px，手机上缩到 94vw */
+  background: var(--paper);
+  border-radius: 14px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, .6);   /* 让纸浮起来 */
+  min-height: 640px;
+  display: flex;
+  flex-direction: column;   /* 内容从上往下排 */
+  overflow: hidden;
+}
+
+/* ---------- 3. 屏幕切换机制 ---------- */
+/* 五个屏幕都是 .screen，默认隐藏；JS 给谁加 .active 谁才显示 */
+.screen {
+  display: none;
+  flex: 1;                  /* flex:1 = 撑满 .stage 剩余高度 */
+  flex-direction: column;
+  padding: 34px 26px 26px;
+}
+.screen.active { display: flex; }
+
+/* ---------- 4. 通用组件 ---------- */
+/* 朱砂印章 */
+.seal {
+  font-family: var(--brush);
+  background: var(--cinnabar);
+  color: #f7efe0;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  transform: rotate(-6deg);  /* 微微歪一点，像手盖的章 */
+}
+.title-seal { width: 58px; height: 58px; font-size: 34px; }
+
+/* 按钮 */
+.btn {
+  font-family: var(--serif);
+  font-size: 16px;
+  letter-spacing: .3em;      /* 字间距拉开，中文按钮更大气 */
+  padding: 13px 20px;
+  border: 1.5px solid var(--txt);
+  border-radius: 8px;
+  background: var(--paper-hi);
+  color: var(--txt);
+  cursor: pointer;
+}
+.btn:hover { background: var(--txt); color: var(--paper); }
+.btn:disabled { opacity: .35; cursor: not-allowed; }  /* 禁用态变灰 */
+.btn-primary {
+  background: var(--cinnabar);
+  color: #f7efe0;
+  border-color: var(--cinnabar);
+  width: 100%;
+}
+
+/* ---------- 5. 封面 ---------- */
+.bureau { font-size: 13px; letter-spacing: .55em; color: var(--txt-dim); text-align: center; margin-bottom: 26px; }
+.title-row { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.title { font: 400 64px/1.1 var(--brush); }
+.title .red { color: var(--cinnabar); }
+.subtitle { text-align: center; color: var(--txt-dim); margin: 10px 0 26px; }
+.divider { width: 64px; height: 1.5px; background: var(--line); margin: 0 auto 26px; }
+.reinc-stat { display: flex; gap: 26px; justify-content: center; margin-bottom: 30px; font-size: 13px; color: var(--txt-dim); text-align: center; }
+.reinc-stat b { display: block; font-size: 22px; color: var(--txt); }
+.foot { margin-top: auto; text-align: center; color: var(--txt-dim); font-size: 12px; }
+
+/* ---------- 6. 天赋签卡 ---------- */
+.sec-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+.sec-title { font-size: 22px; font-weight: 900; }
+.sec-title em { font-style: normal; color: var(--cinnabar); }
+.sec-tip { font-size: 12px; color: var(--txt-dim); }
+
+/* 网格：两列卡片，自动换行 */
+.tgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.tcard {
+  border: 1.5px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper-hi);
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.tcard.sel { border-color: var(--cinnabar); box-shadow: 0 0 0 1px var(--cinnabar); }  /* 选中的样子 */
+.tname { font-weight: 600; font-size: 15px; }
+.tfx { font-size: 12px; color: var(--cinnabar); margin-top: 3px; }
+.picked-count { text-align: center; color: var(--txt-dim); font-size: 13px; margin-top: 12px; }
+.picked-count b { color: var(--cinnabar); font-size: 16px; }
+
+/* ---------- 7. 属性分配 ---------- */
+.alloc-row { display: flex; align-items: center; padding: 13px 4px; border-bottom: 1px dashed var(--line); }
+.alloc-name { width: 64px; font-weight: 600; letter-spacing: .2em; }
+.stepper { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.stepper button {
+  width: 32px; height: 32px;
+  border-radius: 50%;                       /* 圆形按钮 */
+  border: 1.5px solid var(--txt);
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+}
+.stepper button:hover { background: var(--txt); color: var(--paper); }
+.alloc-val { width: 34px; text-align: center; font-size: 24px; font-weight: 900; }
+.remain { display: flex; justify-content: space-between; padding: 12px 16px; margin: 16px 0; border: 1.5px solid var(--txt); border-radius: 9px; }
+.remain b { font-size: 26px; color: var(--cinnabar); }
+
+/* ---------- 8. 人生滚动页 ---------- */
+.hud { border: 1.5px solid var(--txt); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+.hud-age { font-size: 14px; color: var(--txt-dim); margin-bottom: 8px; }
+.hud-age b { font-size: 26px; color: var(--txt); }
+.hud-stats { display: flex; gap: 7px; }
+.hstat { flex: 1; text-align: center; border: 1px solid var(--line); border-radius: 7px; padding: 4px 2px; }
+.hstat small { display: block; font-size: 11px; color: var(--txt-dim); }
+.hstat.joy b { color: var(--cinnabar); }
+
+/* 时间线：可滚动区域，flex:1 占满中间剩余空间 */
+.timeline { flex: 1; overflow-y: auto; padding-left: 6px; margin-bottom: 12px; }
+.tl-item { padding: 0 0 12px 20px; position: relative; border-left: 1px solid var(--line); margin-left: 6px; }
+.tl-item::before {  /* ::before 可以凭空画一个小圆点 */
+  content: "";
+  position: absolute;
+  left: -4px; top: 6px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--txt-dim);
+}
+.tl-age { font-size: 12px; color: var(--cinnabar); font-weight: 600; }
+.tl-text { font-size: 15px; line-height: 1.6; }
+.tl-fx span { font-size: 12px; color: var(--txt-dim); margin-right: 8px; }
+.tl-death .tl-text { font-weight: 600; }
+.tl-death::before { background: var(--cinnabar); }
+
+/* ---------- 9. 结局页 ---------- */
+#screen-end { align-items: center; text-align: center; }
+.end-cause { color: var(--txt-dim); font-size: 13px; letter-spacing: .4em; margin-bottom: 8px; }
+.end-age { font: 400 70px/1.1 var(--brush); }
+.grade-seal { width: 88px; height: 88px; font-size: 52px; margin: 18px 0; }
+.end-quote { color: var(--txt-dim); font-size: 14px; margin-bottom: 20px; }
+.end-btns { width: 100%; display: flex; }

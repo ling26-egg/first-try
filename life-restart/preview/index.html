@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人生重开模拟器 · 轮回司预览版</title>
+<link rel="preconnect" href="https://fonts.loli.net">
+<link href="https://fonts.loli.net/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;600;900&display=swap" rel="stylesheet">
+<style>
+/* ========== 设计基调：轮回管理局 · 宣纸 + 朱砂 + 墨 ========== */
+:root{
+  --ink:#16120d;            /* 页面底色：深墨 */
+  --ink-2:#241d15;
+  --paper:#f3ead8;          /* 宣纸 */
+  --paper-hi:#faf4e6;
+  --paper-dim:#e9dabd;
+  --txt:#2b2118;            /* 纸上墨字 */
+  --txt-dim:#7c6f5c;
+  --cinnabar:#b03a2e;       /* 朱砂 */
+  --cinnabar-deep:#8f2b21;
+  --gold:#a8843c;
+  --indigo:#3d5570;         /* 稀有 */
+  --line:rgba(43,33,24,.22);
+  --serif:"Noto Serif SC","Songti SC","STSong","SimSun",serif;
+  --brush:"Ma Shan Zheng","Noto Serif SC","KaiTi","STKaiti",serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{min-height:100%}
+body{
+  background:
+    radial-gradient(90% 60% at 50% 0%, #241d14 0%, var(--ink) 60%),
+    var(--ink);
+  color:var(--txt);
+  font-family:var(--serif);
+  display:grid;place-items:center;
+  min-height:100vh;padding:28px 16px;
+  overflow-x:hidden;
+}
+/* 背景巨字「命」 */
+.bg-char{
+  position:fixed;inset:0;display:grid;place-items:center;
+  font:900 min(52vw,520px)/1 var(--serif);
+  color:rgba(243,234,216,.035);
+  pointer-events:none;user-select:none;z-index:0;
+}
+/* 宣纸颗粒 */
+.grain{
+  position:fixed;inset:0;z-index:5;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+  opacity:.16;mix-blend-mode:overlay;
+}
+
+/* ========== 舞台布局：两侧竖排批注 + 中央宣纸卡 ========== */
+.wrap{display:flex;align-items:center;gap:34px;z-index:1;position:relative}
+.side{
+  writing-mode:vertical-rl;color:rgba(243,234,216,.34);
+  font-size:14px;letter-spacing:.6em;display:flex;gap:18px;
+  user-select:none;
+}
+.side b{font-weight:600}
+.side .red{color:rgba(176,58,46,.75)}
+.stage{
+  width:min(430px,94vw);
+  background:radial-gradient(140% 90% at 50% 0%, var(--paper-hi) 0%, var(--paper) 55%, var(--paper-dim) 100%);
+  border-radius:14px;
+  box-shadow:inset 0 0 70px rgba(120,90,40,.14), 0 30px 70px rgba(0,0,0,.6), 0 0 0 1px rgba(247,239,224,.06);
+  outline:1px solid rgba(43,33,24,.18);outline-offset:-9px;
+  position:relative;overflow:hidden;
+  min-height:680px;display:flex;flex-direction:column;
+}
+@media (max-width:980px){.side{display:none}}
+
+/* ========== 通用组件 ========== */
+.screen{display:none;flex:1;flex-direction:column;padding:34px 26px 26px}
+.screen.active{display:flex;animation:rise .45s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001s!important;transition-duration:.001s!important}
+}
+.seal{
+  font-family:var(--brush);background:var(--cinnabar);color:#f7efe0;
+  display:grid;place-items:center;border-radius:7px;transform:rotate(-6deg);
+  box-shadow:inset 0 0 0 2px rgba(247,239,224,.5),inset 0 0 0 5px var(--cinnabar),0 3px 10px rgba(143,43,33,.35);
+  text-shadow:0 1px 0 rgba(0,0,0,.15);
+}
+.btn{
+  font-family:var(--serif);font-size:16px;letter-spacing:.35em;text-indent:.35em;
+  color:var(--txt);background:var(--paper-hi);
+  border:1.5px solid var(--txt);border-radius:8px;
+  padding:13px 20px;cursor:pointer;
+  transition:transform .12s ease, background .2s, color .2s, border-color .2s, opacity .2s;
+}
+.btn:hover:not(:disabled){background:var(--txt);color:var(--paper)}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn-primary{
+  background:var(--cinnabar);color:#f7efe0;border-color:var(--cinnabar-deep);
+  box-shadow:0 6px 18px rgba(143,43,33,.35), inset 0 0 0 1.5px rgba(247,239,224,.28);
+  font-weight:600;
+}
+.btn-primary:hover:not(:disabled){background:var(--cinnabar-deep);color:#f7efe0}
+.foot{margin-top:auto;padding-top:18px;text-align:center;color:var(--txt-dim);font-size:12px;letter-spacing:.2em}
+
+/* ========== 封面 ========== */
+#screen-start{align-items:center;text-align:center}
+.bureau{font-size:13px;letter-spacing:.55em;text-indent:.55em;color:var(--txt-dim);margin-bottom:26px}
+.title-row{display:flex;align-items:center;gap:18px;margin-bottom:10px}
+.title{font:400 clamp(52px,15vw,66px)/1.1 var(--brush);color:var(--txt)}
+.title .red{color:var(--cinnabar)}
+.title-seal{width:58px;height:58px;font-size:34px}
+.subtitle{color:var(--txt-dim);font-size:15px;letter-spacing:.14em;margin-bottom:30px}
+.divider{width:64px;height:1.5px;background:var(--line);margin:0 auto 30px;position:relative}
+.divider::after{content:"";position:absolute;left:50%;top:50%;width:7px;height:7px;background:var(--cinnabar);transform:translate(-50%,-50%) rotate(45deg)}
+.reinc-stat{
+  display:flex;gap:26px;justify-content:center;margin-bottom:34px;font-size:13px;color:var(--txt-dim);
+}
+.reinc-stat b{display:block;font-size:22px;color:var(--txt);font-weight:600;margin-bottom:3px}
+.reinc-stat .last{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ========== 天赋抽签 ========== */
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+.sec-title{font-size:22px;font-weight:900;letter-spacing:.1em}
+.sec-title em{font-style:normal;color:var(--cinnabar)}
+.sec-tip{font-size:12px;color:var(--txt-dim);letter-spacing:.1em}
+.sec-sub{font-size:13px;color:var(--txt-dim);margin-bottom:18px;letter-spacing:.08em}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;flex:1;align-content:start;overflow-y:auto;padding:2px}
+.tcard{perspective:800px;cursor:pointer;-webkit-user-select:none;user-select:none;animation:deal .5s ease both}
+@keyframes deal{from{opacity:0;transform:translateY(16px) rotate(2deg)}to{opacity:1;transform:none}}
+.tinner{
+  position:relative;transform-style:preserve-3d;
+  transition:transform .55s cubic-bezier(.25,.7,.3,1.05);
+  min-height:104px;height:100%;
+}
+.tcard.open .tinner{transform:rotateY(180deg)}
+.tface,.tback{
+  position:absolute;inset:0;border-radius:9px;
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  border:1.5px solid var(--line);
+}
+.tback{
+  background:repeating-linear-gradient(45deg,rgba(43,33,24,.05) 0 6px,transparent 6px 12px),var(--paper-hi);
+  display:grid;place-items:center;
+}
+.tback span{font-family:var(--brush);font-size:30px;color:rgba(43,33,24,.3)}
+.tface{
+  transform:rotateY(180deg);background:var(--paper-hi);
+  padding:9px 11px;display:flex;flex-direction:column;gap:3px;
+}
+.tcard.open.sel .tface{border-color:var(--cinnabar);box-shadow:0 0 0 1px var(--cinnabar)}
+.tname{font-weight:600;font-size:15px;letter-spacing:.05em}
+.tdesc{font-size:12px;color:var(--txt-dim);line-height:1.45;flex:1}
+.tfx{font-size:12px;color:var(--cinnabar-deep);letter-spacing:.05em}
+.ttag{
+  position:absolute;top:-1px;right:-1px;width:22px;height:22px;
+  font-size:12px;font-weight:600;color:#f7efe0;
+  display:grid;place-items:center;border-radius:0 8px 0 9px;
+}
+.g0 .ttag{background:var(--txt-dim)} .g1 .ttag{background:var(--indigo)} .g2 .ttag{background:var(--cinnabar)}
+.g2 .tname{color:var(--cinnabar-deep)}
+.sel-stamp{
+  position:absolute;right:6px;bottom:5px;width:26px;height:26px;font-size:15px;
+  transform:rotate(-10deg) scale(0);transition:transform .2s cubic-bezier(.3,1.6,.5,1);
+}
+.tcard.open.sel .sel-stamp{transform:rotate(-10deg) scale(1)}
+.tactions{display:flex;gap:10px;margin-top:16px}
+.tactions .btn{flex:1}
+.picked-count{font-size:13px;color:var(--txt-dim);align-self:center;letter-spacing:.1em}
+.picked-count b{color:var(--cinnabar);font-size:16px}
+
+/* ========== 命格分配 ========== */
+.alloc-row{
+  display:flex;align-items:center;gap:12px;
+  padding:13px 4px;border-bottom:1px dashed var(--line);
+}
+.alloc-name{width:64px;font-weight:600;font-size:16px;letter-spacing:.2em}
+.alloc-name small{display:block;font-weight:400;font-size:11px;color:var(--txt-dim);letter-spacing:.05em}
+.stepper{margin-left:auto;display:flex;align-items:center;gap:12px}
+.stepper button{
+  width:32px;height:32px;border-radius:50%;border:1.5px solid var(--txt);
+  background:transparent;color:var(--txt);font-size:18px;font-family:var(--serif);
+  cursor:pointer;line-height:1;transition:all .15s;
+}
+.stepper button:hover:not(:disabled){background:var(--txt);color:var(--paper)}
+.stepper button:disabled{opacity:.25;cursor:not-allowed}
+.alloc-val{width:34px;text-align:center;font-size:24px;font-weight:900;font-variant-numeric:tabular-nums}
+.bonus-chips{display:flex;flex-wrap:wrap;gap:7px;margin:16px 0 4px}
+.bonus-chips .chip{font-size:12px;padding:3px 10px;border:1px solid var(--line);border-radius:999px;color:var(--txt-dim);background:var(--paper-hi)}
+.bonus-chips .chip b{color:var(--cinnabar-deep);font-weight:600}
+.remain{
+  margin:14px 0 20px;display:flex;justify-content:space-between;align-items:center;
+  padding:12px 16px;border:1.5px solid var(--txt);border-radius:9px;background:var(--paper-hi);
+}
+.remain span{font-size:14px;letter-spacing:.25em}
+.remain b{font-size:26px;color:var(--cinnabar);font-variant-numeric:tabular-nums}
+
+/* ========== 生死簿（人生进行时） ========== */
+#screen-life{padding:24px 20px 18px}
+.hud{border:1.5px solid var(--txt);border-radius:10px;background:var(--paper-hi);padding:12px 14px 10px;margin-bottom:12px}
+.hud-top{display:flex;align-items:baseline;gap:12px;border-bottom:1px dashed var(--line);padding-bottom:8px;margin-bottom:9px}
+.hud-age small{font-size:12px;color:var(--txt-dim);letter-spacing:.2em;margin-right:8px}
+.hud-age b{font-size:30px;font-weight:900;font-variant-numeric:tabular-nums}
+.hud-age i{font-style:normal;font-size:13px;color:var(--txt-dim);margin-left:3px}
+.hud-book{margin-left:auto;font-family:var(--brush);font-size:19px;color:var(--cinnabar)}
+.hud-stats{display:flex;gap:7px}
+.hstat{flex:1;text-align:center;background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:4px 2px 5px}
+.hstat small{display:block;font-size:11px;color:var(--txt-dim)}
+.hstat b{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.hstat.joy b{color:var(--cinnabar-deep)}
+.timeline{flex:1;overflow-y:auto;padding:4px 8px 4px 2px;scroll-behavior:smooth}
+.timeline::-webkit-scrollbar{width:4px}
+.timeline::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.tl-item{
+  position:relative;padding:0 0 14px 24px;
+  opacity:0;animation:rise .4s ease forwards;
+}
+.tl-item::before{
+  content:"";position:absolute;left:5px;top:7px;width:7px;height:7px;border-radius:50%;
+  background:var(--txt-dim);box-shadow:0 0 0 3px var(--paper);
+}
+.tl-item::after{
+  content:"";position:absolute;left:8px;top:20px;bottom:-2px;width:1px;background:var(--line);
+}
+.tl-item:last-child::after{display:none}
+.tl-age{
+  display:inline-block;font-size:12px;color:var(--cinnabar-deep);font-weight:600;
+  letter-spacing:.1em;margin-bottom:2px;
+}
+.tl-text{font-size:15px;line-height:1.6}
+.tl-fx{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.tl-fx span{font-size:12px;padding:1px 8px;border:1px solid var(--line);border-radius:999px;color:var(--txt-dim);background:var(--paper-hi)}
+.tl-death{padding-bottom:4px}
+.tl-death::before{background:var(--cinnabar)}
+.tl-death .tl-age{color:var(--cinnabar)}
+.tl-death .tl-text{font-weight:600}
+.luar-stamp{
+  position:absolute;right:2px;top:0;width:40px;height:40px;font-size:24px;
+  transform:rotate(8deg);opacity:.92;
+}
+.controls{display:flex;gap:9px;margin-top:12px}
+.controls .btn{padding:10px 12px;font-size:14px;letter-spacing:.15em;text-indent:.15em}
+#btn-pause{flex:1}
+#btn-speed{width:86px}
+
+/* ========== 结局 ========== */
+#screen-end{align-items:center;text-align:center}
+.end-cause{font-size:13px;letter-spacing:.4em;text-indent:.4em;color:var(--txt-dim);margin:22px 0 6px}
+.end-age{font:400 74px/1.1 var(--brush);color:var(--txt)}
+.end-age small{font-size:26px}
+.end-quote{font-size:14px;color:var(--txt-dim);margin:10px 0 24px;letter-spacing:.1em}
+.grade-seal{
+  width:88px;height:88px;font-size:52px;margin-bottom:20px;
+  transform:rotate(-8deg);
+}
+.grade-seal::after{content:attr(data-t);position:absolute;bottom:7px;left:0;right:0;font-size:11px;font-family:var(--serif);letter-spacing:.2em;opacity:.85}
+.end-stats{display:flex;gap:8px;margin-bottom:22px;width:100%}
+.end-stats .hstat{padding:8px 2px}
+.end-stats .hstat b{font-size:19px}
+.mem-title{align-self:flex-start;font-size:13px;letter-spacing:.3em;color:var(--txt-dim);margin-bottom:10px}
+.mem{align-self:stretch;text-align:left;background:var(--paper-hi);border:1px solid var(--line);border-radius:9px;padding:11px 14px;margin-bottom:8px;font-size:13.5px;line-height:1.6;color:var(--txt)}
+.mem b{color:var(--cinnabar-deep);font-weight:600;margin-right:8px;font-size:12px}
+.end-btns{display:flex;gap:10px;width:100%;margin-top:16px}
+.end-btns .btn{flex:1}
+</style>
+</head>
+<body>
+<div class="bg-char" aria-hidden="true">命</div>
+<div class="grain" aria-hidden="true"></div>
+
+<div class="wrap">
+  <div class="side" aria-hidden="true"><b>轮回管理局 · 转世科</b><span>生死有命</span><span class="red">富贵在天</span></div>
+
+  <main class="stage">
+
+    <!-- ===== 封面 ===== -->
+    <section class="screen active" id="screen-start">
+      <div class="bureau">轮 回 管 理 局 · 转 世 科</div>
+      <div class="title-row">
+        <h1 class="title">人生<span class="red">重开</span></h1>
+        <div class="seal title-seal">命</div>
+      </div>
+      <p class="subtitle">此生不得志？饮罢孟婆汤，再来一世。</p>
+      <div class="divider"></div>
+      <div class="reinc-stat">
+        <div><b id="stat-runs">0</b>累计转世</div>
+        <div class="last"><b id="stat-last">——</b>上世结局</div>
+      </div>
+      <button class="btn btn-primary" id="btn-start" style="width:100%">踏 入 轮 回</button>
+      <div class="foot">预览版 v0.1 · 纯前端 · 可玩</div>
+    </section>
+
+    <!-- ===== 抽天赋 ===== -->
+    <section class="screen" id="screen-talent">
+      <div class="sec-head">
+        <div class="sec-title">摇签 · <em>天赋</em></div>
+        <div class="sec-tip">十签取三</div>
+      </div>
+      <p class="sec-sub">判官摇签筒，十支定你前世修行——选出三支随身携带。</p>
+      <div class="tgrid" id="tgrid"></div>
+      <div class="tactions">
+        <button class="btn" id="btn-reveal">翻 开 十 签</button>
+        <button class="btn btn-primary" id="btn-confirm-talent" disabled>落 入 凡 尘</button>
+      </div>
+      <div class="picked-count">已选 <b id="pick-n">0</b> / 3 签</div>
+    </section>
+
+    <!-- ===== 分配属性 ===== -->
+    <section class="screen" id="screen-alloc">
+      <div class="sec-head">
+        <div class="sec-title">命格 · <em>初定</em></div>
+        <div class="sec-tip">自由分配 20 点</div>
+      </div>
+      <p class="sec-sub">四维命格决定你的人生走向，天赋加成将在投胎时生效。</p>
+      <div id="alloc-list"></div>
+      <div class="bonus-chips" id="bonus-chips"></div>
+      <div class="remain"><span>剩余点数</span><b id="remain">20</b></div>
+      <button class="btn btn-primary" id="btn-born" style="width:100%">投 胎 转 世</button>
+    </section>
+
+    <!-- ===== 人生滚动 ===== -->
+    <section class="screen" id="screen-life">
+      <div class="hud">
+        <div class="hud-top">
+          <div class="hud-age"><small>阳寿</small><b id="hud-age">0</b><i>岁</i></div>
+          <div class="hud-book">生死簿</div>
+        </div>
+        <div class="hud-stats">
+          <div class="hstat"><small>颜</small><b id="s-FACE">5</b></div>
+          <div class="hstat"><small>智</small><b id="s-INT">5</b></div>
+          <div class="hstat"><small>体</small><b id="s-BODY">5</b></div>
+          <div class="hstat"><small>家</small><b id="s-HOME">5</b></div>
+          <div class="hstat joy"><small>乐</small><b id="s-JOY">5</b></div>
+        </div>
+      </div>
+      <div class="timeline" id="timeline"></div>
+      <div class="controls">
+        <button class="btn" id="btn-pause">暂 停</button>
+        <button class="btn" id="btn-speed">速度 ×1</button>
+      </div>
+    </section>
+
+    <!-- ===== 结局 ===== -->
+    <section class="screen" id="screen-end">
+      <div class="end-cause">卒 · <span id="end-cause">寿终正寝</span></div>
+      <div class="end-age"><span id="end-age">73</span><small> 岁</small></div>
+      <p class="end-quote" id="end-quote"></p>
+      <div class="seal grade-seal" id="grade-seal" data-t="">S</div>
+      <div class="end-stats">
+        <div class="hstat"><small>颜</small><b id="e-FACE">0</b></div>
+        <div class="hstat"><small>智</small><b id="e-INT">0</b></div>
+        <div class="hstat"><small>体</small><b id="e-BODY">0</b></div>
+        <div class="hstat"><small>家</small><b id="e-HOME">0</b></div>
+        <div class="hstat joy"><small>乐</small><b id="e-JOY">0</b></div>
+      </div>
+      <div class="mem-title">本 世 掠 影</div>
+      <div id="mem-list" style="width:100%"></div>
+      <div class="end-btns">
+        <button class="btn" id="btn-home">回到封面</button>
+        <button class="btn btn-primary" id="btn-again">再 入 轮 回</button>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="side" aria-hidden="true"><b>预览版 · 可玩</b><span>下辈子</span><span class="red">早点重开</span></div>
+</div>
+
+<script>
+/* =====================================================
+   人生重开模拟器 · 预览版（学习用，代码有意保持直白）
+   结构：数据（天赋/事件）→ 工具函数 → 界面切换 → 游戏流程
+   ===================================================== */
+
+/* ---------- 小工具 ---------- */
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const rnd  = n => Math.floor(Math.random() * n);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+const STAT_NAME  = { FACE:'颜值', INT:'智力', BODY:'体质', HOME:'家境', JOY:'快乐' };
+
+/* ---------- 数据：天赋（g: 0凡 1稀 2传） ---------- */
+const TALENTS = [
+  { id:'study',   n:'好学',       g:0, d:'读书使你快乐（大概）。',       fx:{INT:1} },
+  { id:'strong',  n:'强壮',       g:0, d:'从小力气就比同龄人大。',       fx:{BODY:1} },
+  { id:'cute',    n:'娃娃脸',     g:0, d:'三十岁还被叫小朋友。',         fx:{FACE:1} },
+  { id:'well',    n:'小康之家',   g:0, d:'吃穿不愁，普通而幸福。',       fx:{HOME:1} },
+  { id:'optim',   n:'乐天派',     g:0, d:'天塌下来当被子盖。',           fx:{JOY:2} },
+  { id:'smart2',  n:'早慧',       g:0, d:'两岁就会背三十首唐诗。',       fx:{INT:1} },
+  { id:'farm',    n:'乡下长大',   g:0, d:'泥地里摸爬滚打，皮实。',       fx:{HOME:-1, BODY:1} },
+  { id:'urban',   n:'城里长大',   g:0, d:'见世面早，眼界开阔。',         fx:{HOME:1} },
+  { id:'scholar', n:'书香门第',   g:0, d:'家里书比玩具多。',             fx:{INT:2, HOME:-1} },
+  { id:'sick',    n:'体质孱弱',   g:0, d:'药罐子，但脑子活。',           fx:{BODY:-2, INT:1} },
+  { id:'chubby',  n:'微胖界人士', g:0, d:'婴儿肥跟到了三十岁。',         fx:{BODY:1, FACE:-1} },
+  { id:'only',    n:'独生子女',   g:0, d:'全家的资源与期待。',           fx:{HOME:1, JOY:1} },
+  { id:'pretty',  n:'天生丽质',   g:1, d:'回头率是种与生俱来的东西。',   fx:{FACE:3} },
+  { id:'brain',   n:'超级大脑',   g:1, d:'过目不忘，学啥会啥。',         fx:{INT:3} },
+  { id:'iron',    n:'铜筋铁骨',   g:1, d:'感冒？不存在的。',             fx:{BODY:3} },
+  { id:'demo',    n:'拆迁户',     g:1, d:'一夜之间，家里多了六套房。',   fx:{HOME:3} },
+  { id:'luck2',   n:'欧皇附体',   g:1, d:'抽卡必出金，扭蛋必出隐藏。',   fx:{LUCK:2} },
+  { id:'grind',   n:'学业天才',   g:1, d:'考试是你的主场，操场不是。',   fx:{INT:2, BODY:-1} },
+  { id:'glass',   n:'玻璃心',     g:1, d:'一句重话能难过一星期。',       fx:{JOY:-2} },
+  { id:'social',  n:'社交达人',   g:1, d:'三分钟和一个陌生人称兄道弟。', fx:{FACE:1, JOY:1} },
+  { id:'chosen',  n:'天命之子',   g:2, d:'命格贵不可言，气运加身。',     fx:{FACE:1, INT:1, BODY:1, LUCK:3} },
+  { id:'rich',    n:'首富之子',   g:2, d:'你从没见过钱的尽头。',         fx:{HOME:6} },
+  { id:'immortal',n:'转世仙人',   g:2, d:'孟婆汤对你只起了一半作用。',   fx:{BODY:3, JOY:3, LUCK:1} },
+  { id:'protag',  n:'龙傲天',     g:2, d:'你走过的路自带背景音乐。',     fx:{FACE:2, INT:2, BODY:1, JOY:-1} },
+];
+
+/* ---------- 数据：人生事件 ----------
+   min/max: 年龄区间；w: 权重；fx: 属性变化；
+   cond(st): 触发条件；once: 只发生一次；
+   need/set: 用旗标保证"结婚"这类里程碑只走一个分支 */
+const EVENTS = [
+  /* —— 出生 —— */
+  { id:'b0', min:0, max:0, w:10, txt:'你出生在一个平静的夜晚，哭声嘹亮，护士说你是今晚最精神的小孩。' },
+  { id:'b1', min:0, max:0, w:6,  cond:s=>s.attrs.HOME>=7, txt:'你出生在市中心的大房子里，人生起点颇高。' },
+  { id:'b2', min:0, max:0, w:6,  cond:s=>s.attrs.HOME<=2, txt:'你出生在小镇的老屋里，全家人都盼着你争气。' },
+  { id:'b3', min:0, max:0, w:3,  fx:{JOY:1}, txt:'你是全家的第一个孩子，集万千宠爱于一身。' },
+
+  /* —— 幼年 1-5 —— */
+  { id:'y1',  min:1, max:3, w:8, once:true, fx:{JOY:1}, txt:'你学会了走路，全家为你欢呼鼓掌。' },
+  { id:'y2',  min:1, max:4, w:7, fx:{JOY:1}, txt:'你把奶粉涂了满脸，家人笑称你为"喝奶小金刚"。' },
+  { id:'y3',  min:2, max:5, w:6, fx:{BODY:-1}, txt:'你发了一场高烧，父母彻夜未眠地守护。' },
+  { id:'y4',  min:2, max:5, w:6, cond:s=>s.attrs.FACE>=5, fx:{FACE:1}, txt:'邻居见你就夸："这孩子长得真俊。"' },
+  { id:'y5',  min:1, max:4, w:6, fx:{JOY:-1}, txt:'你头磕在桌角，起了好大一个包。' },
+  { id:'y6',  min:2, max:5, w:6, once:true, fx:{INT:1}, txt:'你识字很早，三岁就会背十几首古诗。' },
+  { id:'y7',  min:0, max:1, w:8, once:true, fx:{INT:1}, txt:'抓周宴上，你一把抓住了计算器。' },
+  { id:'y8',  min:0, max:1, w:6, once:true, fx:{JOY:1}, txt:'抓周宴上，你抓住了毛笔，爷爷笑得合不拢嘴。' },
+  { id:'y9',  min:3, max:5, w:6, fx:{JOY:1}, txt:'你迷上了动画片，每天准时蹲守电视机。' },
+  { id:'y10', min:2, max:5, w:5, fx:{JOY:-1}, txt:'你在游乐园走丢了一回，虚惊一场。' },
+  { id:'y11', min:3, max:5, w:5, fx:{JOY:1}, txt:'你把车钥匙埋进花盆，全家找了整整三天。' },
+  { id:'y12', min:2, max:5, w:6, fx:{HOME:1, JOY:1}, txt:'过年回老家，你的压岁钱塞满了口袋。' },
+
+  /* —— 小学 6-12 —— */
+  { id:'p1',  min:6, max:7, w:9, once:true, txt:'你上小学了，郑重地戴上了红领巾。' },
+  { id:'p2',  min:6, max:12, w:7, fx:{INT:1}, txt:'你考了一次满分，名字被写在光荣榜上。' },
+  { id:'p3',  min:8, max:12, w:6, fx:{JOY:-1}, txt:'你上课看漫画被老师当场没收。' },
+  { id:'p4',  min:7, max:12, w:5, once:true, fx:{JOY:1}, txt:'你和同桌用粉笔画了一条庄严的三八线。' },
+  { id:'p5',  min:8, max:12, w:5, fx:{BODY:1}, txt:'你加入了校篮球队，每天放学练一小时。' },
+  { id:'p6',  min:9, max:12, w:4, once:true, fx:{INT:1, JOY:-1}, txt:'你当上了班长，从此天天帮老师收作业。' },
+  { id:'p7',  min:9, max:12, w:6, fx:{INT:-1, JOY:1}, txt:'你迷上了游戏厅，成绩悄悄下滑。' },
+  { id:'p8',  min:7, max:12, w:5, fx:{BODY:1}, txt:'你被高年级同学堵过一次巷子，从此学会了反抗。' },
+  { id:'p9',  min:6, max:12, w:5, once:true, fx:{INT:1}, txt:'你的作文《我的妈妈》拿了全区一等奖。' },
+  { id:'p10', min:8, max:12, w:6, once:true, fx:{FACE:-1, INT:1}, txt:'你近视了，鼻梁上多了副小眼镜。' },
+  { id:'p11', min:6, max:10, w:6, once:true, fx:{JOY:1, BODY:1}, txt:'你学会了骑自行车，整个夏天都在巷子里飞驰。' },
+  { id:'p12', min:6, max:12, w:6, fx:{JOY:1}, txt:'春游！你把零食分享给了半个班级。' },
+  { id:'p13', min:6, max:11, w:4, cond:s=>s.attrs.HOME>=5, once:true, fx:{INT:1, JOY:-1}, txt:'家里给你报了钢琴班，练习曲成了童年BGM。' },
+  { id:'p14', min:7, max:12, w:5, once:true, fx:{JOY:2}, txt:'你偷偷收养了一只流浪猫，取名"煤球"。' },
+  { id:'p15', min:9, max:12, w:5, cond:s=>s.attrs.INT>=5, fx:{INT:1}, txt:'你期末考进了班级前三，全家请吃了一顿大餐。' },
+  { id:'p16', min:10, max:12, w:5, once:true, fx:{JOY:-2}, txt:'你溜进网吧被爸爸抓包，享受了一顿"混合双打"。' },
+  { id:'p17', min:11, max:12, w:5, once:true, fx:{JOY:1}, txt:'你情窦初开，默默喜欢上了邻座的同学。' },
+
+  /* —— 中学 13-18 —— */
+  { id:'m1',  min:13, max:13, w:9, once:true, fx:{JOY:-1}, txt:'你上了初中，作业量翻了一倍。' },
+  { id:'m2',  min:13, max:18, w:7, fx:{INT:1}, txt:'你第一次月考排名中游，暗下决心要努力。' },
+  { id:'m3',  min:13, max:17, w:5, fx:{JOY:1}, txt:'你成了班里的"显眼包"，走到哪都热闹。' },
+  { id:'m4',  min:13, max:16, w:6, once:true, fx:{FACE:1}, txt:'你一年长高了十厘米，校服又短了。' },
+  { id:'m5',  min:13, max:17, w:5, fx:{FACE:-1}, txt:'青春期的痘痘爬上了你的脸。' },
+  { id:'m6',  min:13, max:18, w:6, fx:{BODY:1, JOY:1}, txt:'你放学后偷偷打篮球打到天黑。' },
+  { id:'m7',  min:14, max:18, w:5, once:true, fx:{JOY:-1}, txt:'你暗恋的人官宣了对象，你在被窝里emo了一晚。' },
+  { id:'m8',  min:14, max:18, w:5, cond:s=>s.attrs.INT>=6, fx:{INT:1, JOY:1}, txt:'你考进了年级前十，老师把你当成了招牌。' },
+  { id:'m9',  min:13, max:17, w:5, once:true, fx:{JOY:-1}, txt:'你和最好的朋友闹掰了，冷战了半个月。' },
+  { id:'m10', min:14, max:18, w:5, once:true, fx:{JOY:1}, txt:'你加入了社团，认识了天南海北的同好。' },
+  { id:'m11', min:15, max:15, w:9, once:true, fx:{INT:1, JOY:1}, txt:'中考你超常发挥，考上了一所不错的高中。' },
+  { id:'m12', min:16, max:17, w:6, fx:{BODY:-1}, txt:'晚自习上到十点，你拖着疲惫的身体回家。' },
+  { id:'m13', min:16, max:18, w:5, fx:{BODY:1}, txt:'运动会上你为班级拿了个名次，全班都在欢呼。' },
+  { id:'m14', min:16, max:18, w:5, fx:{BODY:-1, JOY:-1}, txt:'学业压力越来越大，你开始偶尔失眠。' },
+  { id:'m15', min:16, max:17, w:5, cond:s=>s.attrs.INT>=7, once:true, fx:{INT:1}, txt:'你参加了学科竞赛，捧回了市级奖项。' },
+  { id:'m16', min:18, max:18, w:20, once:true, need:'gaokao', set:'gaokao', cond:s=>s.attrs.INT>=7, fx:{INT:1, JOY:2}, txt:'高考你超常发挥，考进了心仪的大学！' },
+  { id:'m17', min:18, max:18, w:20, once:true, need:'gaokao', set:'gaokao', cond:s=>s.attrs.INT<7, txt:'高考发挥一般，你去了一所普通的大学，但人生才刚开始。' },
+  { id:'m18', min:16, max:18, w:4, cond:s=>s.attrs.FACE>=6, once:true, fx:{JOY:2}, txt:'你收到了人生中第一封情书，脸红了一整天。' },
+
+  /* —— 大学与工作 19-30 —— */
+  { id:'u1',  min:19, max:19, w:9, once:true, fx:{JOY:1}, txt:'你上了大学，第一次真正离开家。' },
+  { id:'u2',  min:19, max:22, w:6, once:true, fx:{JOY:1}, txt:'你在社团认识了几个能处一辈子的朋友。' },
+  { id:'u3',  min:19, max:22, w:6, fx:{INT:-1}, txt:'你挂了一科，含泪报名了补考。' },
+  { id:'u4',  min:19, max:22, w:5, cond:s=>s.attrs.INT>=6, fx:{HOME:1, JOY:1}, txt:'你拿到了奖学金，请室友搓了一顿。' },
+  { id:'u5',  min:19, max:24, w:5, cond:s=>s.attrs.FACE>=5, once:true, fx:{JOY:2}, txt:'你谈了人生第一场恋爱，连食堂的饭都变香了。' },
+  { id:'u6',  min:19, max:24, w:5, cond:s=>s.attrs.FACE<4, once:true, fx:{JOY:-1}, txt:'你表白被拒，对着镜子陷入了长久的沉思。' },
+  { id:'u7',  min:19, max:25, w:5, fx:{BODY:1}, txt:'你开始健身，风雨无阻坚持了半年。' },
+  { id:'u8',  min:22, max:23, w:6, once:true, fx:{BODY:-1}, txt:'毕业论文季，你熬夜赶稿，头发大把地掉。' },
+  { id:'u9',  min:23, max:24, w:8, once:true, fx:{JOY:1}, txt:'毕业了，你和同学们拍了一整天照片，笑着笑着就哭了。' },
+  { id:'u10', min:23, max:26, w:8, once:true, set:'work', txt:'你找到了第一份工作，工资不高，但总算自立了。' },
+  { id:'u11', min:22, max:24, w:5, cond:s=>s.attrs.INT>=7, once:true, set:'grad', fx:{INT:1}, txt:'你考研成功，继续在学术的海洋里扑腾。' },
+  { id:'u12', min:23, max:30, w:6, fx:{JOY:1}, txt:'你搬进了自己租的小屋，第一次拥有完全的自由。' },
+  { id:'u13', min:24, max:30, w:6, cond:s=>s.flags.work, fx:{BODY:-1}, txt:'加班成了日常，工位上的绿萝都比你精神。' },
+  { id:'u14', min:25, max:30, w:4, fx:{HOME:-1, JOY:-2}, txt:'你辞职创业，半年亏光了积蓄。' },
+  { id:'u15', min:25, max:32, w:5, fx:{JOY:-1}, txt:'父母开始安排相亲，对方一开口就问你工资。' },
+  { id:'u16', min:26, max:34, w:8, once:true, need:'married', set:'married', cond:s=>s.attrs.FACE>=6||s.attrs.HOME>=7, fx:{JOY:2}, txt:'你与心爱的人步入婚姻，婚礼上宾客满堂。' },
+  { id:'u17', min:27, max:36, w:7, once:true, need:'married', set:'married', cond:s=>s.attrs.FACE<6&&s.attrs.HOME<7, txt:'你在家人的张罗下成了家，日子平稳而踏实。' },
+  { id:'u18', min:25, max:32, w:4, cond:s=>s.attrs.HOME>=6, once:true, fx:{HOME:-2, JOY:-1}, txt:'你攒钱付了首付，从此背上了甜蜜的房贷。' },
+  { id:'u19', min:24, max:30, w:5, once:true, fx:{JOY:2}, txt:'你养了一只狗，下班终于有了盼头。' },
+  { id:'u20', min:26, max:32, w:5, cond:s=>s.attrs.INT>=6, fx:{HOME:2}, txt:'你升了一级，工资条终于体面了些。' },
+  { id:'u21', min:26, max:32, w:3, fx:{HOME:-2, JOY:-2}, txt:'公司业务收缩，你被裁员了，度过了难熬的一个月。' },
+  { id:'u22', min:24, max:30, w:4, cond:s=>s.attrs.INT>=5, fx:{HOME:1}, txt:'你搞的副业渐渐有了起色，月入多了几千。' },
+
+  /* —— 中年 31-50 —— */
+  { id:'d1',  min:29, max:40, w:8, once:true, need:'child', set:'child', fx:{JOY:2, HOME:-1}, txt:'你的孩子出生了，你第一次抱起这个软软的小生命。' },
+  { id:'d2',  min:35, max:50, w:6, fx:{HOME:1}, txt:'你又还上了一个月的房贷，余额肉眼可见地变厚。' },
+  { id:'d3',  min:35, max:50, w:6, fx:{BODY:-1}, txt:'体检报告上出现了几个箭头，你盯着看了很久。' },
+  { id:'d4',  min:36, max:55, w:6, fx:{BODY:1}, txt:'你保温杯里泡上了枸杞，开始认真养生。' },
+  { id:'d5',  min:35, max:50, w:5, once:true, txt:'同学聚会上，有人飞黄腾达，有人平平淡淡，你举杯感慨。' },
+  { id:'d6',  min:38, max:50, w:5, once:true, fx:{JOY:-1}, txt:'便利店的小哥管你叫"叔/姨"，你愣了三秒。' },
+  { id:'d7',  min:36, max:50, w:4, cond:s=>s.attrs.INT>=7, fx:{HOME:2}, txt:'你升任部门主管，办公室有了自己的一面墙。' },
+  { id:'d8',  min:35, max:50, w:5, once:true, fx:{JOY:2}, txt:'你重拾了年轻时的爱好，周末属于自己了。' },
+  { id:'d9',  min:35, max:50, w:6, fx:{JOY:1}, txt:'你陪父母过了个年，忽然发现他们真的老了。' },
+  { id:'d10', min:35, max:48, w:4, fx:{FACE:1, BODY:1}, txt:'你减肥成功，旧裤子终于又能穿了。' },
+  { id:'d11', min:36, max:50, w:4, fx:{HOME:-1}, txt:'你跟风投资亏了一笔钱，从此只相信余额宝。' },
+  { id:'d12', min:35, max:48, w:4, fx:{INT:1, HOME:1}, txt:'你考下了行业内含金量很高的证书。' },
+  { id:'d13', min:40, max:50, w:5, once:true, fx:{JOY:-1}, txt:'深夜下班路上，你忽然开始思考人生的意义。' },
+  { id:'d14', min:42, max:52, w:6, cond:s=>s.flags.child, once:true, fx:{JOY:2}, txt:'你的孩子考上了大学，你在朋友圈连发九张图。' },
+
+  /* —— 老年 51+ —— */
+  { id:'o1',  min:55, max:70, w:8, once:true, fx:{JOY:1}, txt:'你退休了，清晨去公园打太极，成了晨练队的一员。' },
+  { id:'o2',  min:55, max:80, w:6, cond:s=>s.flags.child, once:true, fx:{JOY:2}, txt:'你抱上了孙子/孙女，小家伙抓着你的手指不撒手。' },
+  { id:'o3',  min:55, max:95, w:5, fx:{JOY:-2}, txt:'又一位老友走了，你沉默了很久很久。' },
+  { id:'o4',  min:55, max:70, w:5, once:true, fx:{JOY:1}, txt:'你学会了用智能手机，家族群里你最活跃。' },
+  { id:'o5',  min:55, max:90, w:6, cond:s=>s.attrs.BODY>=5, fx:{BODY:1}, txt:'你坚持晨跑，体检指标让医生都夸你。' },
+  { id:'o6',  min:60, max:95, w:5, fx:{BODY:-2}, txt:'你住了一次院，老伴一直握着你的手。' },
+  { id:'o7',  min:60, max:85, w:4, once:true, fx:{INT:1}, txt:'你开始写回忆录，把这一生的故事记下来。' },
+  { id:'o8',  min:55, max:90, w:5, once:true, fx:{JOY:2}, txt:'你把阳台种满了花，每个清晨都有香气。' },
+  { id:'o9',  min:55, max:80, w:5, cond:s=>s.attrs.HOME>=5, once:true, fx:{JOY:2}, txt:'你和老伴去旅行，第一次看到了大海。' },
+  { id:'o10', min:55, max:95, w:6, fx:{JOY:1}, txt:'过年儿孙满堂，家里热闹得像庙会。' },
+
+  /* —— 任意年龄 —— */
+  { id:'a1', min:5, max:95, w:4, fx:{BODY:-1}, txt:'你生了一场不大不小的病，歇了一阵子。' },
+  { id:'a2', min:6, max:90, w:3, fx:{JOY:1}, txt:'你捡到一百块钱，请自己吃了顿好的。' },
+  { id:'a3', min:6, max:90, w:3, fx:{JOY:1}, txt:'你帮助了一位陌生人，心里暖了一整天。' },
+  { id:'a4', min:5, max:95, w:3, fx:{HOME:-1}, txt:'台风天，家里漏了水，忙活了一整晚。' },
+  { id:'a5', min:5, max:95, w:3, fx:{JOY:1}, txt:'你吃到了这辈子最好吃的一顿饭，现在还想它。' },
+  { id:'a6', min:5, max:95, w:3, txt:'你做了一个很长很长的梦，醒来忘了一大半。' },
+  { id:'a7', min:5, max:95, w:3, fx:{JOY:-1}, txt:'你弄丢了那把你最喜欢的伞。' },
+
+  /* —— 命格特判 —— */
+  { id:'x1', min:16, max:30, w:3, cond:s=>s.attrs.FACE>=8, once:true, fx:{HOME:2}, txt:'你被星探当街搭讪："同学，考虑过当模特吗？"' },
+  { id:'x2', min:15, max:25, w:3, cond:s=>s.attrs.INT>=9, once:true, fx:{INT:1, HOME:1, JOY:2}, txt:'你在国际学科竞赛中获奖，站上了领奖台。' },
+  { id:'x3', min:20, max:60, w:3, cond:s=>s.attrs.HOME>=9, once:true, fx:{HOME:3}, txt:'家里长辈过世，你继承了一笔可观的遗产。' },
+  { id:'x4', min:6,  max:60, w:2, cond:s=>s.attrs.JOY<=1, fx:{JOY:-1}, txt:'你感到前所未有的低落，觉得一切都没意思。' },
+  { id:'x5', min:6,  max:60, w:2, cond:s=>s.luck>=2, fx:{HOME:1, JOY:2}, txt:'你在商场抽奖活动中了一台冰箱，全家人围着看。' },
+
+  /* —— 天赋专属剧情 —— */
+  { id:'t1', min:0, max:0, w:100, cond:s=>s.talents.includes('immortal'), once:true, fx:{BODY:1, JOY:1}, txt:'你出生那夜红光满室，隐有仙乐，接生婆连连称奇。' },
+  { id:'t2', min:6, max:12, w:100, cond:s=>s.talents.includes('chosen'), once:true, fx:{JOY:2}, txt:'算命先生见了你，半天说出一句话："此子命格，贵不可言。"' },
+  { id:'t3', min:6, max:18, w:100, cond:s=>s.talents.includes('rich'), once:true, fx:{JOY:1}, txt:'你从来不知道"零花钱用完了"是什么意思。' },
+  { id:'t4', min:13, max:30, w:100, cond:s=>s.talents.includes('protag'), once:true, fx:{JOY:1}, txt:'你转身的瞬间，风自动吹起了你的衣角——你早就习惯了。' },
+];
+
+/* ---------- 存档（累计转世次数 / 上世结局） ---------- */
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+};
+
+/* ---------- 游戏状态 ---------- */
+let st = null;      // 当前一世的状态
+let timer = null;   // 自动播放计时器
+let drawTen = [];   // 本次抽到的十签
+
+function freshState(){
+  return {
+    talents: [],
+    alloc: { FACE:0, INT:0, BODY:0, HOME:0 },
+    attrs: { FACE:5, INT:5, BODY:5, HOME:5, JOY:5 },
+    luck: 0,
+    age: -1,
+    alive: true,
+    paused: false,
+    speed: 1,                 // 1 / 2 / 4
+    flags: {},
+    log: [],                  // 生死簿条目
+  };
+}
+
+/* ---------- 界面切换 ---------- */
+function show(id){
+  $$('.screen').forEach(s => s.classList.remove('active'));
+  $('#'+id).classList.add('active');
+}
+
+/* ---------- 封面 ---------- */
+function renderStart(){
+  $('#stat-runs').textContent = store.get('lr_runs') || 0;
+  $('#stat-last').textContent = store.get('lr_last') || '——';
+}
+
+/* ---------- 抽天赋 ---------- */
+function startTalentPhase(){
+  st = freshState();
+  /* 按稀有度做加权抽签：凡签权重大，传签很小 */
+  const bag = [];
+  TALENTS.forEach(t => {
+    const w = [60, 26, 6][t.g];
+    for (let i = 0; i < w; i++) bag.push(t);
+  });
+  drawTen = [];
+  while (drawTen.length < 10) {
+    const t = bag[rnd(bag.length)];
+    if (!drawTen.includes(t)) drawTen.push(t);
+  }
+  const grid = $('#tgrid');
+  grid.innerHTML = '';
+  drawTen.forEach((t, i) => {
+    const fx = Object.entries(t.fx)
+      .map(([k,v]) => `${STAT_NAME[k] || '幸运'}${v>0?'+':''}${v}`).join(' ');
+    const card = document.createElement('div');
+    card.className = `tcard g${t.g}`;
+    card.style.animationDelay = (i * 60) + 'ms';
+    card.dataset.idx = i;
+    card.innerHTML = `
+      <div class="tinner">
+        <div class="tback"><span>签</span></div>
+        <div class="tface">
+          <div class="tname">${t.n}</div>
+          <div class="tdesc">${t.d}</div>
+          <div class="tfx">${fx}</div>
+          <div class="ttag">${['凡','稀','传'][t.g]}</div>
+          <div class="seal sel-stamp">取</div>
+        </div>
+      </div>`;
+    card.addEventListener('click', () => togglePick(card, i));
+    grid.appendChild(card);
+  });
+  $('#btn-reveal').disabled = false;
+  $('#btn-confirm-talent').disabled = true;
+  $('#pick-n').textContent = 0;
+  show('screen-talent');
+}
+
+function togglePick(card, idx){
+  if (!card.classList.contains('open')) return;          // 没翻开不能选
+  const picked = $$('.tcard.sel').length;
+  if (card.classList.contains('sel')) {
+    card.classList.remove('sel');
+  } else if (picked < 3) {
+    card.classList.add('sel');
+  } else {
+    return;                                               // 最多选三签
+  }
+  const n = $$('.tcard.sel').length;
+  $('#pick-n').textContent = n;
+  $('#btn-confirm-talent').disabled = n !== 3;
+}
+
+function revealCards(){
+  $$('#tgrid .tcard').forEach((c, i) => {
+    setTimeout(() => c.classList.add('open'), i * 90);
+  });
+  $('#btn-reveal').disabled = true;
+}
+
+/* ---------- 分配属性 ---------- */
+const ALLOC_KEYS = ['FACE','INT','BODY','HOME'];
+
+function startAllocPhase(){
+  st.talents = $$('#tgrid .tcard.sel').map(c => drawTen[+c.dataset.idx].id);
+  const list = $('#alloc-list');
+  list.innerHTML = '';
+  ALLOC_KEYS.forEach(k => {
+    const row = document.createElement('div');
+    row.className = 'alloc-row';
+    row.innerHTML = `
+      <div class="alloc-name">${STAT_NAME[k]}</div>
+      <div class="stepper">
+        <button data-k="${k}" data-d="-1">−</button>
+        <div class="alloc-val" id="v-${k}">0</div>
+        <button data-k="${k}" data-d="1">＋</button>
+      </div>`;
+    list.appendChild(row);
+  });
+  $$('#alloc-list .stepper button').forEach(b =>
+    b.addEventListener('click', () => stepAlloc(b.dataset.k, +b.dataset.d)));
+
+  /* 天赋加成预告 */
+  const chips = $('#bonus-chips');
+  chips.innerHTML = '';
+  st.talents.forEach(id => {
+    const t = TALENTS.find(x => x.id === id);
+    const fx = Object.entries(t.fx)
+      .map(([k,v]) => `${(STAT_NAME[k]||'幸运')}<b>${v>0?'+':''}${v}</b>`).join(' ');
+    const el = document.createElement('span');
+    el.className = 'chip';
+    el.innerHTML = `${t.n}：${fx}`;
+    chips.appendChild(el);
+  });
+  renderAlloc();
+  show('screen-alloc');
+}
+
+function stepAlloc(k, d){
+  const total = ALLOC_KEYS.reduce((s, key) => s + st.alloc[key], 0);
+  const next = st.alloc[k] + d;
+  if (next < 0 || next > 10) return;
+  if (d > 0 && total >= 20) return;
+  st.alloc[k] = next;
+  renderAlloc();
+}
+
+function renderAlloc(){
+  ALLOC_KEYS.forEach(k => $('#v-'+k).textContent = st.alloc[k]);
+  const total = ALLOC_KEYS.reduce((s, k) => s + st.alloc[k], 0);
+  $('#remain').textContent = 20 - total;
+}
+
+/* ---------- 投胎：合成最终属性 ---------- */
+function beginLife(){
+  const bonus = { FACE:0, INT:0, BODY:0, HOME:0, JOY:0, LUCK:0 };
+  st.talents.forEach(id => {
+    const t = TALENTS.find(x => x.id === id);
+    Object.entries(t.fx).forEach(([k,v]) => bonus[k] += v);
+  });
+  ALLOC_KEYS.forEach(k => st.attrs[k] = clamp(st.alloc[k] + bonus[k], 0, 12));
+  st.attrs.JOY = clamp(5 + bonus.JOY, 0, 10);
+  st.luck = bonus.LUCK;
+  st.age = -1;
+  $('#timeline').innerHTML = '';
+  $('#btn-pause').textContent = '暂 停';
+  $('#btn-speed').textContent = '速度 ×1';
+  st.paused = false;
+  st.speed = 1;
+  show('screen-life');
+  nextYear();
+  setTimer();
+}
+
+/* ---------- 人生推进 ---------- */
+function pickEvent(){
+  const cands = EVENTS.filter(e =>
+    st.age >= e.min && st.age <= e.max &&
+    (!e.once || !st.flags['used_' + e.id]) &&
+    (!e.need || st.flags[e.need]) &&
+    (!e.set || !st.flags[e.set]) &&
+    (!e.cond || e.cond(st))
+  );
+  if (!cands.length) return { id:'fill', txt:'这一年平平无奇，日子如流水般过去。' };
+  /* 幸运影响权重：好事更易发生，坏事被稀释 */
+  const weighted = [];
+  cands.forEach(e => {
+    let w = e.w;
+    const net = e.fx ? Object.values(e.fx).reduce((a,b)=>a+b,0) : 0;
+    if (net > 0) w *= (1 + st.luck * 0.12);
+    if (net < 0) w *= Math.max(0.4, 1 - st.luck * 0.12);
+    for (let i = 0; i < Math.ceil(w); i++) weighted.push(e);
+  });
+  const ev = weighted[rnd(weighted.length)];
+  if (ev.once) st.flags['used_' + ev.id] = true;
+  if (ev.set) st.flags[ev.set] = true;
+  return ev;
+}
+
+function nextYear(){
+  if (!st.alive) return;
+  st.age++;
+  const ev = pickEvent();
+  const fxList = [];
+  if (ev.fx) Object.entries(ev.fx).forEach(([k,v]) => {
+    if (k === 'LUCK') { st.luck += v; return; }
+    st.attrs[k] = clamp(st.attrs[k] + v, 0, k === 'JOY' ? 10 : 12);
+    fxList.push(`${STAT_NAME[k]}${v>0?'+':''}${v}`);
+  });
+  st.log.push({ age: st.age, txt: ev.txt, fx: fxList, death: false });
+  addTimelineItem(st.age, ev.txt, fxList, false);
+  updateHud();
+  if (checkDeath()) return;
+}
+
+function addTimelineItem(age, txt, fxList, death){
+  const box = $('#timeline');
+  const item = document.createElement('div');
+  item.className = 'tl-item' + (death ? ' tl-death' : '');
+  const fxHtml = (fxList && fxList.length)
+    ? `<div class="tl-fx">${fxList.map(f=>`<span>${f}</span>`).join('')}</div>` : '';
+  item.innerHTML = `
+    <div class="tl-age">${death ? '· 卒 ·' : age + ' 岁'}</div>
+    ${death ? '<div class="seal luar-stamp">卒</div>' : ''}
+    <div class="tl-text">${txt}</div>${fxHtml}`;
+  box.appendChild(item);
+  box.scrollTop = box.scrollHeight;
+}
+
+function updateHud(){
+  $('#hud-age').textContent = st.age;
+  ['FACE','INT','BODY','HOME','JOY'].forEach(k =>
+    $('#s-'+k).textContent = st.attrs[k]);
+}
+
+/* ---------- 死亡判定 ---------- */
+function checkDeath(){
+  let cause = null;
+  if (st.attrs.BODY <= 0) {
+    cause = st.age < 6 ? '先天不足' : st.age < 40 ? '积劳成疾' : '油尽灯枯';
+  } else if (st.attrs.JOY <= 0 && Math.random() < 0.3) {
+    cause = '郁郁而终';
+  } else if (st.attrs.BODY <= 2 && Math.random() < 0.05) {
+    cause = '久病不愈';
+  } else if (st.age >= 65) {
+    const p = Math.max(0, 0.03 + (st.age - 65) * 0.015 - st.attrs.BODY * 0.004);
+    if (Math.random() < p) cause = '寿终正寝';
+  }
+  if (st.age >= 100) cause = '寿终正寝';
+  if (!cause) return false;
+
+  st.alive = false;
+  stopTimer();
+  st.log.push({ age: st.age, txt: deathLine(cause), fx: [], death: true, cause });
+  addTimelineItem(st.age, deathLine(cause), [], true);
+  setTimeout(showEnd, 1600);
+  return true;
+}
+
+function deathLine(cause){
+  return {
+    '先天不足': '你还没来得及看清这个世界，就匆匆离开了。',
+    '积劳成疾': '身体是革命的本钱——这句话你说给下一世听吧。',
+    '油尽灯枯': '灯油燃尽，你安详地合上了眼。',
+    '郁郁而终': '你太累了，这一世就到这里吧。',
+    '久病不愈': '药石无医，家人陪你走完了最后一程。',
+    '寿终正寝': '儿孙满堂，含笑而终，此生算是圆满。',
+  }[cause];
+}
+
+/* ---------- 结算 ---------- */
+function showEnd(){
+  const a = st.attrs;
+  const score = a.FACE + a.INT + a.BODY + a.HOME + a.JOY + Math.floor(st.age / 4);
+  const grade = [
+    { min:55, g:'S', t:'逆天改命，此生无憾' },
+    { min:45, g:'A', t:'精彩纷呈，可圈可点' },
+    { min:35, g:'B', t:'有起有落，人间值得' },
+    { min:25, g:'C', t:'平平淡淡，也是真' },
+    { min:-99,g:'D', t:'苦命一生，下世请重开' },
+  ].find(x => score >= x.min);
+
+  const cause = st.log[st.log.length - 1].cause || '寿终正寝';
+  $('#end-cause').textContent = cause;
+  $('#end-age').textContent = st.age;
+  $('#end-quote').textContent = deathLine(cause);
+  const seal = $('#grade-seal');
+  seal.textContent = grade.g;
+  seal.dataset.t = grade.t;
+
+  ['FACE','INT','BODY','HOME','JOY'].forEach(k => $('#e-'+k).textContent = a[k]);
+
+  /* 本世掠影：随机挑三条（跳过出生与死亡） */
+  const pool = st.log.filter(e => !e.death && e.age > 0);
+  const mems = [];
+  while (mems.length < 3 && pool.length) {
+    mems.push(pool.splice(rnd(pool.length), 1)[0]);
+  }
+  const memBox = $('#mem-list');
+  memBox.innerHTML = '';
+  mems.forEach(m => {
+    const el = document.createElement('div');
+    el.className = 'mem';
+    el.innerHTML = `<b>${m.age} 岁</b>${m.txt}`;
+    memBox.appendChild(el);
+  });
+  if (!mems.length) {
+    memBox.innerHTML = '<div class="mem">这一生短得来不及留下故事。</div>';
+  }
+
+  const runs = (+store.get('lr_runs') || 0) + 1;
+  store.set('lr_runs', runs);
+  store.set('lr_last', `享年${st.age}岁 · ${grade.g}级`);
+  show('screen-end');
+}
+
+/* ---------- 自动播放控制 ---------- */
+const SPEED_MS = { 1: 1100, 2: 520, 4: 200 };
+function setTimer(){
+  stopTimer();
+  if (st && st.alive && !st.paused) {
+    timer = setInterval(() => { if (st.alive && !st.paused) nextYear(); }, SPEED_MS[st.speed]);
+  }
+}
+function stopTimer(){ if (timer) { clearInterval(timer); timer = null; } }
+
+/* ---------- 事件绑定 ---------- */
+$('#btn-start').addEventListener('click', startTalentPhase);
+$('#btn-reveal').addEventListener('click', revealCards);
+$('#btn-confirm-talent').addEventListener('click', startAllocPhase);
+$('#btn-born').addEventListener('click', beginLife);
+$('#btn-again').addEventListener('click', startTalentPhase);
+$('#btn-home').addEventListener('click', () => { stopTimer(); renderStart(); show('screen-start'); });
+$('#btn-pause').addEventListener('click', () => {
+  if (!st) return;
+  st.paused = !st.paused;
+  $('#btn-pause').textContent = st.paused ? '继 续' : '暂 停';
+  setTimer();
+});
+$('#btn-speed').addEventListener('click', () => {
+  if (!st) return;
+  st.speed = { 1:2, 2:4, 4:1 }[st.speed];
+  $('#btn-speed').textContent = '速度 ×' + st.speed;
+  setTimer();
+});
+
+renderStart();
+</script>
+</body>
+</html>

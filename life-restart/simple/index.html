@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>人生重开模拟器 · 迷你版</title>
+  <!-- 样式单独放在 style.css，HTML 只负责"页面上有什么" -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 背景装饰：一个巨大的"命"字 -->
+  <div class="bg-char" aria-hidden="true">命</div>
+
+  <!-- 五个"屏幕"：同一时刻只显示一个（.active 类控制） -->
+  <main class="stage">
+
+    <!-- 屏幕1：封面 -->
+    <section class="screen active" id="screen-start">
+      <div class="bureau">轮 回 管 理 局 · 转 世 科</div>
+      <div class="title-row">
+        <h1 class="title">人生<span class="red">重开</span></h1>
+        <div class="seal title-seal">命</div>
+      </div>
+      <p class="subtitle">此生不得志？饮罢孟婆汤，再来一世。</p>
+      <div class="divider"></div>
+      <div class="reinc-stat">
+        <div><b id="stat-runs">0</b>累计转世</div>
+        <div><b id="stat-last">——</b>上世结局</div>
+      </div>
+      <button class="btn btn-primary" id="btn-start">踏 入 轮 回</button>
+      <div class="foot">迷你版 · 为了让你读懂每一行</div>
+    </section>
+
+    <!-- 屏幕2：抽天赋（十签取三） -->
+    <section class="screen" id="screen-talent">
+      <div class="sec-head">
+        <div class="sec-title">摇签 · <em>天赋</em></div>
+        <div class="sec-tip">十签取三</div>
+      </div>
+      <div class="tgrid" id="tgrid"></div>
+      <button class="btn btn-primary" id="btn-confirm-talent" disabled>落 入 凡 尘</button>
+      <div class="picked-count">已选 <b id="pick-n">0</b> / 3 签</div>
+    </section>
+
+    <!-- 屏幕3：分配属性（20 个自由点数） -->
+    <section class="screen" id="screen-alloc">
+      <div class="sec-head">
+        <div class="sec-title">命格 · <em>初定</em></div>
+        <div class="sec-tip">自由分配 20 点</div>
+      </div>
+      <div id="alloc-list"></div>
+      <div class="remain"><span>剩余点数</span><b id="remain">20</b></div>
+      <button class="btn btn-primary" id="btn-born">投 胎 转 世</button>
+    </section>
+
+    <!-- 屏幕4：人生滚动 -->
+    <section class="screen" id="screen-life">
+      <div class="hud">
+        <div class="hud-age">阳寿 <b id="hud-age">0</b> 岁</div>
+        <div class="hud-stats">
+          <div class="hstat"><small>颜</small><b id="s-FACE">5</b></div>
+          <div class="hstat"><small>智</small><b id="s-INT">5</b></div>
+          <div class="hstat"><small>体</small><b id="s-BODY">5</b></div>
+          <div class="hstat"><small>家</small><b id="s-HOME">5</b></div>
+          <div class="hstat joy"><small>乐</small><b id="s-JOY">5</b></div>
+        </div>
+      </div>
+      <div class="timeline" id="timeline"></div>
+      <button class="btn" id="btn-pause">暂 停</button>
+    </section>
+
+    <!-- 屏幕5：结局 -->
+    <section class="screen" id="screen-end">
+      <div class="end-cause">卒 · <span id="end-cause">寿终正寝</span></div>
+      <div class="end-age"><span id="end-age">0</span> 岁</div>
+      <div class="seal grade-seal" id="grade-seal">S</div>
+      <div class="end-quote" id="end-quote"></div>
+      <div class="end-btns">
+        <button class="btn btn-primary" id="btn-again">再 入 轮 回</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 数据和逻辑放在两个 js 文件里。
+       script 标签写在 body 末尾：保证 HTML 先加载完，JS 才运行 -->
+  <script src="data.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
